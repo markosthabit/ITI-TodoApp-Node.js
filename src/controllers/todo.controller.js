@@ -45,9 +45,7 @@ const updateTodoById = async (req, res) => {
     const { id } = req.params;
     const { title, status, tags } = req.body;
 
-    await Todo.findOneAndUpdate({ _id: id }, { title: title, status: status, tags: tags });
-
-    const updatedTodo = await Todo.findById(id);
+    const updatedTodo = await Todo.findOneAndUpdate({ _id: id }, { title: title, status: status, tags: tags }, { new: true });
 
     return res.status(200).json({ message: "Todo Updated successfully", updatedTodo: updatedTodo });
 }
@@ -64,9 +62,9 @@ const deleteTodoById = async (req, res) => {
         return res.status(200).json({ messgae: `Todo with id ${id} deleted successfully` });
     }
     catch (err) {
-        
+
     }
-    
+
 }
 
 

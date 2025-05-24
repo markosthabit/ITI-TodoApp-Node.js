@@ -12,7 +12,7 @@ router.get('/', userController.getAllUsers);
 router.get('/:id', userController.getUserById);
 
 // Update a user by ID
-router.put('/:id', userController.updateUserById);
+router.patch('/:id', userController.updateUserById);
 
 // Delete a user by ID
 router.delete('/:id', userController.deleteUserById);
