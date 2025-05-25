@@ -14,8 +14,8 @@ createUser = async (req, res) => {
         if (!username || !password || !firstName || !lastName) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
-        const salt = randomBytes(16).toString('hex');
-        const hashedPassword = scryptSync(password, salt, 64).toString('hex');
+        const salt = randomBytes(16).toString('base64');
+        const hashedPassword = scryptSync(password, salt, 64).toString('base64');
 
         await User.insertOne({
             username: username,
@@ -30,8 +30,10 @@ createUser = async (req, res) => {
         if (err.message.includes('duplicate key error')) {
             return res.status(409).json({ error: 'Username already exists' });
         }
-        if (err.message.includes('validatorError')) {
-            return res.status(409).json({ error: `Entered user Data is not valid: ${err}` });
+        if (['validator', 'validation'].some(str => err.message.toLowerCase().includes(str))) {
+            console.error(err);
+            return res.status(409).json({ error: `Entered user Data is not valid` });
+
         }
 
         console.error('createUser error:', err);
@@ -55,7 +57,7 @@ loginUser = async (req, res) => {
         const user = await User.findOne({ username: username }, { username: 1, password: 1 });
         const [salt, key] = user.password.split(':');
         const hashedBuffer = scryptSync(password, salt, 64);
-        const keyBuffer = Buffer.from(key, 'hex');
+        const keyBuffer = Buffer.from(key, 'base64');
         const match = timingSafeEqual(hashedBuffer, keyBuffer);
 
         if (match) {
