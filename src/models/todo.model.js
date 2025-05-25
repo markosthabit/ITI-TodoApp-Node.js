@@ -18,6 +18,11 @@ const todoSchema = new Schema({
     },
     tags: {
         type: Array
+    },
+    creator_Id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     }
 }, { timestamps: true });
 

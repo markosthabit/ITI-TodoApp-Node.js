@@ -7,10 +7,11 @@ const Todo = require('../models/todo.model');
 const createTodo = async (req, res) => {
     try {
         const { title, tags = [] } = req.body;
+        const creator_Id = req.user._id;
         if (!title) {
             return res.status(400).json({ error: 'Missing required field: title' });
         }
-        const todo = await Todo.insertOne({ title: title, tags: tags });
+        const todo = await Todo.insertOne({ title: title, tags: tags, creator_Id: creator_Id });
         return res.status(200).json({ message: "Todo Created successfully", createdTodo: todo });
     } catch (err) {
         console.error('creteTodo error: ', err);
@@ -31,7 +32,7 @@ const getTodos = async (req, res) => {
     if (!status) {
         return res.status(400).json({ error: 'Missing required field: status' });
     }
-    const todos = await Todo.find({ status: status }, [{ limit: limit }, { skip: skip }]);
+    const todos = await Todo.find({ status: status, creator_Id: req.user._id }, [{ limit: limit }, { skip: skip }]);
     res.body = todos;
     return res.status(200).json({ message: "Todos retrieved successfully", retrievedTodos: todos });
 };

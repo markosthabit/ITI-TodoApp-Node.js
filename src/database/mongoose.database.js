@@ -8,7 +8,7 @@ mongoose.connection.on('disconnecting', () => console.log('disconnecting'));
 mongoose.connection.on('close', () => console.log('close'));
 
 const initMongoose = () => {
-    mongoose.connect('mongodb://127.0.0.1:27017/');
+    mongoose.connect('mongodb://127.0.0.1:27017/todoApp');
 
 }
 
