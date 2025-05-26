@@ -1,54 +1,685 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <title>Todo App!</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .page {
+      display: none;
+    }
+    .page.active {
+      display: block;
+    }
+    .todo-card {
+      transition: all 0.3s ease;
+    }
+    .todo-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .add-todo-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+    }
+  </style>
 </head>
-
 <body>
-    <div class="container-fluid text-center bg-gradient bg-info " style="--bs-bg-opacity: .4;">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-4">
-                <div class="row justify-content-center">
-                    <div class="col-md-8 bg-success p-2 shadow-lg rounded" style="--bs-bg-opacity: .6;">
-                        <form class="m-3">
-                            <div class="row mb-3">
-                                <label for="inputEmail3" class="col-sm-3 col-form-label">Email</label>
-                                <div class="col-sm-9">
-                                    <input type="email" class="form-control" id="inputEmail3">
-                                </div>
-                            </div>
-                            <div class="row mb-3">
-                                <label for="inputPassword3" class="col-sm-3 col-form-label">Password</label>
-                                <div class="col-sm-9">
-                                    <input type="password" class="form-control" id="inputPassword3">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Login</button>
-                            <button type="submit" class="btn btn-primary">Sign Up</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Todo App</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="todosLink">Todos</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="adminLink">Admin Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="logoutLink">Logout</a>
+          </li>
+        </ul>
+      </div>
     </div>
+  </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        fetch("http://127.0.0.1:3000/todos/")
-    .then(res => res.json())
-    .then(data => console.log(data))
-    .catch(error => console.error('Error:', error));
+  <!-- Login/Signup Page -->
+  <div id="authPage" class="page container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+              <li class="nav-item">
+                <a class="nav-link active" href="#" id="loginTab">Login</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" id="signupTab">Signup</a>
+              </li>
+            </ul>
+          </div>
+          <div class="card-body">
+            <div id="loginForm">
+              <div class="mb-3">
+                <label for="loginUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="loginUsername" placeholder="Enter username">
+              </div>
+              <div class="mb-3">
+                <label for="loginPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="loginPassword" placeholder="Enter password">
+              </div>
+              <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
+            </div>
+            <div id="signupForm" style="display: none;">
+              <div class="mb-3">
+                <label for="signupUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="signupUsername" placeholder="Enter username">
+              </div>
+              <div class="mb-3">
+                <label for="signupPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="signupPassword" placeholder="Enter password">
+              </div>
+              <div class="mb-3">
+                <label for="signupFirstName" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="signupFirstName" placeholder="Enter first name">
+              </div>
+              <div class="mb-3">
+                <label for="signupLastName" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="signupLastName" placeholder="Enter last name">
+              </div>
+              <div class="mb-3">
+                <label for="signupDateOfBirth" class="form-label">Date of Birth</label>
+                <input type="date" class="form-control" id="signupDateOfBirth">
+              </div>
+              <button class="btn btn-primary w-100" onclick="handleSignup()">Signup</button>
+            </div>
+            <p id="authMessage" class="mt-3 text-center"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-fetch("http://127.0.0.1:3000/users/")
-    .then(res => res.json())
-    .then(data => console.log(data))
-    .catch(error => console.error('Error:', error));
-    </script>
+  <!-- Todos Page -->
+  <div id="todosPage" class="page container mt-5">
+    <h2 class="mb-4">Your Todos</h2>
+    <div class="mb-4">
+      <label for="statusFilter" class="form-label">Filter by Status</label>
+      <select id="statusFilter" class="form-select w-auto d-inline-block me-2" onchange="fetchTodos()">
+        <option value="">All</option>
+        <option value="to-do">To Do</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+      </select>
+      <button class="btn btn-outline-primary" onclick="changePage(-1)">Previous</button>
+      <span id="pageInfo" class="mx-3"></span>
+      <button class="btn btn-outline-primary" onclick="changePage(1)">Next</button>
+    </div>
+    <div id="todosContainer" class="row"></div>
+    <button class="btn btn-success add-todo-btn" data-bs-toggle="modal" data-bs-target="#addTodoModal">
+      Add Todo
+    </button>
+    <!-- Add Todo Modal -->
+    <div class="modal fade" id="addTodoModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add New Todo</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="todoTitle" class="form-label">Todo Title</label>
+              <input type="text" class="form-control" id="todoTitle" placeholder="Enter todo title">
+            </div>
+            <div class="mb-3">
+              <label for="todoTags" class="form-label">Tags (comma-separated)</label>
+              <input type="text" class="form-control" id="todoTags" placeholder="e.g., work, urgent">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="handleAddTodo()">Save Todo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Edit Todo Modal -->
+    <div class="modal fade" id="editTodoModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Todo</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="editTodoId">
+            <div class="mb-3">
+              <label for="editTodoTitle" class="form-label">Todo Title</label>
+              <input type="text" class="form-control" id="editTodoTitle" placeholder="Enter todo title">
+            </div>
+            <div class="mb-3">
+              <label for="editTodoStatus" class="form-label">Status</label>
+              <select class="form-select" id="editTodoStatus">
+                <option value="to-do">To Do</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="editTodoTags" class="form-label">Tags (comma-separated)</label>
+              <input type="text" class="form-control" id="editTodoTags" placeholder="e.g., work, urgent">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="handleEditTodo()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- Admin Dashboard Page -->
+  <div id="adminPage" class="page container mt-5">
+    <h2 class="mb-4">Admin Dashboard</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Date of Birth</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+    <!-- User Details Modal -->
+    <div class="modal fade" id="userDetailsModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">User Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="userDetails"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit User</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="editUserId">
+            <div class="mb-3">
+              <label for="editUserUsername" class="form-label">Username</label>
+              <input type="text" class="form-control" id="editUserUsername" placeholder="Enter username">
+            </div>
+            <div class="mb-3">
+              <label for="editUserFirstName" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="editUserFirstName" placeholder="Enter first name">
+            </div>
+            <div class="mb-3">
+              <label for="editUserLastName" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="editUserLastName" placeholder="Enter last name">
+            </div>
+            <div class="mb-3">
+              <label for="editUserDateOfBirth" class="form-label">Date of Birth</label>
+              <input type="date" class="form-control" id="editUserDateOfBirth">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="handleEditUser()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- App JavaScript -->
+  <script>
+    let userRole = null;
+    let currentPage = 0;
+    const limit = 10;
+
+    // Page Navigation
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      updateNavbar();
+    }
+
+    function updateNavbar() {
+      const isLoggedIn = !!userRole;
+      document.getElementById('todosLink').style.display = isLoggedIn ? 'block' : 'none';
+      document.getElementById('adminLink').style.display = isLoggedIn && userRole === 'admin' ? 'block' : 'none';
+      document.getElementById('logoutLink').style.display = isLoggedIn ? 'block' : 'none';
+    }
+
+    // Tab Toggle
+    document.getElementById('loginTab').addEventListener('click', () => {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('loginTab').classList.add('active');
+      document.getElementById('signupTab').classList.remove('active');
+    });
+
+    document.getElementById('signupTab').addEventListener('click', () => {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('signupForm').style.display = 'block';
+      document.getElementById('signupTab').classList.add('active');
+      document.getElementById('loginTab').classList.remove('active');
+    });
+
+    // API Base URL
+    const API_URL = 'http://localhost:5000';
+
+    // Login
+    async function handleLogin() {
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      const messageEl = document.getElementById('authMessage');
+
+      try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          messageEl.textContent = data.message || 'Login successful';
+          await checkUserRole();
+          showPage('todosPage');
+        } else {
+          messageEl.textContent = 'Login failed. Check credentials.';
+        }
+      } catch (error) {
+        messageEl.textContent = 'Error during login.';
+      }
+    }
+
+    // Signup
+    async function handleSignup() {
+      const username = document.getElementById('signupUsername').value;
+      const password = document.getElementById('signupPassword').value;
+      const firstName = document.getElementById('signupFirstName').value;
+      const lastName = document.getElementById('signupLastName').value;
+      const dateOfBirth = document.getElementById('signupDateOfBirth').value;
+      const messageEl = document.getElementById('authMessage');
+
+      try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, firstName, lastName, dateOfBirth }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          messageEl.textContent = 'Signup successful! Please log in.';
+          document.getElementById('loginTab').click();
+        } else {
+          messageEl.textContent = 'Signup failed.';
+        }
+      } catch (error) {
+        messageEl.textContent = 'Error during signup.';
+      }
+    }
+
+    // Check User Role
+    async function checkUserRole() {
+      try {
+        const response = await fetch(`${API_URL}/users`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          userRole = 'admin';
+        } else {
+          userRole = 'user';
+        }
+      } catch (error) {
+        userRole = 'user';
+      }
+    }
+
+    // Fetch Todos
+    async function fetchTodos() {
+      const status = document.getElementById('statusFilter').value;
+      const skip = currentPage * limit;
+      const url = new URL(`${API_URL}/todos`);
+      url.searchParams.append('limit', limit);
+      url.searchParams.append('skip', skip);
+      if (status) url.searchParams.append('status', status);
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const todos = await response.json();
+          const todosContainer = document.getElementById('todosContainer');
+          todosContainer.innerHTML = '';
+          todos.forEach(todo => {
+            const card = document.createElement('div');
+            card.className = 'col-md-4 mb-3';
+            card.innerHTML = `
+              <div class="card todo-card">
+                <div class="card-body">
+                  <h5 class="card-title">${todo.title}</h5>
+                  <p class="card-text">Status: ${todo.status}</p>
+                  <p class="card-text">Tags: ${todo.listOfTags.join(', ')}</p>
+                  <button class="btn btn-warning btn-sm" onclick="openEditTodoModal('${todo._id}', '${todo.title}', '${todo.status}', '${todo.listOfTags.join(', ')}')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteTodo('${todo._id}')">Delete</button>
+                </div>
+              </div>
+            `;
+            todosContainer.appendChild(card);
+          });
+          document.getElementById('pageInfo').textContent = `Page ${currentPage + 1}`;
+        } else {
+          document.getElementById('authMessage').textContent = 'Please log in to view todos.';
+          showPage('authPage');
+        }
+      } catch (error) {
+        document.getElementById('authMessage').textContent = 'Error fetching todos.';
+        showPage('authPage');
+      }
+    }
+
+    // Add Todo
+    async function handleAddTodo() {
+      const title = document.getElementById('todoTitle').value;
+      const tags = document.getElementById('todoTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+      try {
+        const response = await fetch(`${API_URL}/todos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, listOfTags: tags }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          fetchTodos();
+          bootstrap.Modal.getInstance(document.getElementById('addTodoModal')).hide();
+          document.getElementById('todoTitle').value = '';
+          document.getElementById('todoTags').value = '';
+        } else {
+          alert('Failed to add todo.');
+        }
+      } catch (error) {
+        alert('Error adding todo.');
+      }
+    }
+
+    // Open Edit Todo Modal
+    function openEditTodoModal(id, title, status, tags) {
+      document.getElementById('editTodoId').value = id;
+      document.getElementById('editTodoTitle').value = title;
+      document.getElementById('editTodoStatus').value = status;
+      document.getElementById('editTodoTags').value = tags;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('editTodoModal')).show();
+    }
+
+    // Edit Todo
+    async function handleEditTodo() {
+      const id = document.getElementById('editTodoId').value;
+      const title = document.getElementById('editTodoTitle').value;
+      const status = document.getElementById('editTodoStatus').value;
+      const tags = document.getElementById('editTodoTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+      try {
+        const response = await fetch(`${API_URL}/todos/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, status, listOfTags: tags }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          fetchTodos();
+          bootstrap.Modal.getInstance(document.getElementById('editTodoModal')).hide();
+        } else {
+          alert('Failed to update todo.');
+        }
+      } catch (error) {
+        alert('Error updating todo.');
+      }
+    }
+
+    // Delete Todo
+    async function deleteTodo(id) {
+      try {
+        const response = await fetch(`${API_URL}/todos/${id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          fetchTodos();
+        } else {
+          alert('Failed to delete todo.');
+        }
+      } catch (error) {
+        alert('Error deleting todo.');
+      }
+    }
+
+    // Fetch Users (Admin)
+    async function fetchUsers() {
+      try {
+        const response = await fetch(`${API_URL}/users`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const users = await response.json();
+          const usersTable = document.getElementById('usersTable');
+          usersTable.innerHTML = '';
+          users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${user.username}</td>
+              <td>${user.firstName}</td>
+              <td>${user.lastName}</td>
+              <td>${new Date(user.dateOfBirth).toLocaleDateString()}</td>
+              <td>
+                <button class="btn btn-info btn-sm" onclick="viewUser('${user._id}')">View</button>
+                <button class="btn btn-warning btn-sm" onclick="openEditUserModal('${user._id}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.dateOfBirth}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteUser('${user._id}')">Delete</button>
+              </td>
+            `;
+            usersTable.appendChild(row);
+          });
+        } else {
+          document.getElementById('authMessage').textContent = 'Access Fate denied or not logged in.';
+          showPage('authPage');
+        }
+      } catch (error) {
+        document.getElementById('authMessage').textContent = 'Error fetching users.';
+        showPage('authPage');
+      }
+    }
+
+    // View User
+    async function viewUser(id) {
+      try {
+        const response = await fetch(`${API_URL}/users/${id}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const user = await response.json();
+          document.getElementById('userDetails').innerHTML = `
+            <p><strong>Username:</strong> ${user.username}</p>
+            <p><strong>First Name:</strong> ${user.firstName}</p>
+            <p><strong>Last Name:</strong> ${user.lastName}</p>
+            <p><strong>Date of Birth:</strong> ${new Date(user.dateOfBirth).toLocaleDateString()}</p>
+          `;
+          bootstrap.Modal.getOrCreateInstance(document.getElementById('userDetailsModal')).show();
+        } else {
+          alert('Failed to fetch user.');
+        }
+      } catch (error) {
+        alert('Error fetching user.');
+      }
+    }
+
+    // Open Edit User Modal
+    function openEditUserModal(id, username, firstName, lastName, dateOfBirth) {
+      document.getElementById('editUserId').value = id;
+      document.getElementById('editUserUsername').value = username;
+      document.getElementById('editUserFirstName').value = firstName;
+      document.getElementById('editUserLastName').value = lastName;
+      document.getElementById('editUserDateOfBirth').value = dateOfBirth.split('T')[0];
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).show();
+    }
+
+    // Edit User
+    async function handleEditUser() {
+      const id = document.getElementById('editUserId').value;
+      const username = document.getElementById('editUserUsername').value;
+      const firstName = document.getElementById('editUserFirstName').value;
+      const lastName = document.getElementById('editUserLastName').value;
+      const dateOfBirth = document.getElementById('editUserDateOfBirth').value;
+      try {
+        const response = await fetch(`${API_URL}/users/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, firstName, lastName, dateOfBirth }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          fetchUsers();
+          bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+        } else {
+          alert('Failed to update user.');
+        }
+      } catch (error) {
+        alert('Error updating user.');
+      }
+    }
+
+    // Delete User
+    async function deleteUser(id) {
+      try {
+        const response = await fetch(`${API_URL}/users/${id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          fetchUsers();
+        } else {
+          alert('Failed to delete user.');
+        }
+      } catch (error) {
+        alert('Error deleting user.');
+      }
+    }
+
+    // Pagination
+    function changePage(delta) {
+      currentPage = Math.max(0, currentPage + delta);
+      fetchTodos();
+    }
+
+    // Logout
+    document.getElementById('logoutLink').addEventListener('click', async () => {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      userRole = null;
+      currentPage = 0;
+      showPage('authPage');
+    });
+
+    // Navbar Links
+    document.getElementById('todosLink').addEventListener('click', () => {
+      currentPage = 0;
+      showPage('todosPage');
+      fetchTodos();
+    });
+
+    document.getElementById('adminLink').addEventListener('click', () => {
+      showPage('adminPage');
+      fetchUsers();
+    });
+
+    // Initial Setup
+    showPage('authPage');
+  </script>
 </body>
-
 </html>
