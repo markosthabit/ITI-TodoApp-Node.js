@@ -15,7 +15,7 @@ router.use('/todos', verifyToken, todosRoute, (req, res) => {
 }
 );
 
-router.use('/users', usersRoute, verifyToken, isAdmin, (req, res) => {
+router.use('/users', verifyToken, isAdmin, usersRoute, (req, res) => {
     res.json({ message: 'Admin access granted' });
 });
 

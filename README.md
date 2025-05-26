@@ -23,11 +23,11 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 
 ## Future Improvements
 
-- Add comprehensive documentation
-- Enhance the UI with a more polished frontend
-- Implement password hashing and salting
-- Add encryption for user data
-- Integrate JWT for authentication
+- [ ] Add comprehensive documentation
+- [ ] Enhance the UI with a more polished frontend
+- [x]Implement password hashing and salting
+- [ ] Add encryption for user data
+- [x] Integrate JWT for authentication
 
 ## Challenges Faced
 
@@ -39,6 +39,7 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 - Leveraged AI to automate repetitive tasks
 - Gained confidence reading and using documentation
 - Improved structuring of Node.js/Express projects
+- Using GitHub to backup, track and organize the project.
 
 ## License
 

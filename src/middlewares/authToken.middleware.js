@@ -1,14 +1,15 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
+var { verifyToken } = require('../utils/jwt.util');
 
-const verifyToken = async (req, res, next) => {
+const authToken = async (req, res, next) => {
     try {
-        const { authorization } = req.headers;
-        if (!authorization) {
-            return res.status(401).json({ message: 'authorization header is required' });
+
+        const token = req.cookies.token;
+        if (!token) {
+            return res.status(401).json({ message: 'authorization token is required' });
         }
 
-        const payload = jwt.verify(authorization, process.env.JWT_SECRET);
+        const payload = verifyToken(token, process.env.JWT_SECRET);
         const user = await User.findOne({ username: payload.username });
         if (!user) {
             res.status(401).json({ message: 'User not found' });
@@ -23,6 +24,7 @@ const verifyToken = async (req, res, next) => {
 
 
 const isAdmin = async (req, res, next) => {
+    console.log("isAdmin check");
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Forbidden: Admin access required' });
     }
@@ -31,4 +33,4 @@ const isAdmin = async (req, res, next) => {
 
 
 
-module.exports = { verifyToken, isAdmin };
+module.exports = { verifyToken: authToken, isAdmin };

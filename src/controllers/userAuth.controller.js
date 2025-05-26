@@ -1,7 +1,7 @@
 const User = require('../models/user.model');
 const { scryptSync, randomBytes, timingSafeEqual } = require('node:crypto');
 
-var jwt = require('jsonwebtoken');
+var { signToken } = require('../utils/jwt.util');
 
 
 /**
@@ -61,18 +61,24 @@ login = async (req, res) => {
         const hashedBuffer = scryptSync(password, salt, 64);
         const keyBuffer = Buffer.from(key, 'base64');
         const match = timingSafeEqual(hashedBuffer, keyBuffer);
-        console.log(process.env.JWT_SECRET);
         if (match) {
-            const token = jwt.sign(
+            const token = signToken(
                 {
                     username: user.username,
                     userId: user._id,
                     role: user.role
                 },
                 process.env.JWT_SECRET,
-                { expiresIn: '1d' }
-            )
-            return res.status(200).json(token);
+                { expiresIn: '1d' });
+
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // Use true in production (HTTPS)
+                sameSite: 'strict',
+                maxAge: 24 * 60 * 60 * 1000, // 1 day
+            });
+
+            res.json({ message: 'Logged in successfully' });
         }
         else {
             return res.status(401).json({ message: 'Invalid Authentication Credentials!' });
