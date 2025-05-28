@@ -24,17 +24,15 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 ## Future Improvements
 
 - [ ] Add comprehensive documentation
-- [x] Build a Frontend with a polished UI
-- [x] Implement password hashing and salting
+- [ ] Enhance the UI with a more polished frontend
+- [x]Implement password hashing and salting
 - [ ] Add encryption for user data
 - [x] Integrate JWT for authentication
-- [x] Store JWT tokens using HttpsOnly Cookies
 
 ## Challenges Faced
 
 - Writing extensive code under time constraints
 - Organizing code across folders (e.g., routes, controllers, models)
-- Handling CORS errors
 
 ## Lessons Learned
 
@@ -42,7 +40,6 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 - Gained confidence reading and using documentation
 - Improved structuring of Node.js/Express projects
 - Using GitHub to backup, track and organize the project.
-- Handling environment variables with dotenv
 
 ## License
 
