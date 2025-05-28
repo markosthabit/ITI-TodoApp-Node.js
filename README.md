@@ -24,8 +24,8 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 ## Future Improvements
 
 - [ ] Add comprehensive documentation
-- [ ] Enhance the UI with a more polished frontend
-- [x]Implement password hashing and salting
+- [ ] Build a Front end with polished UI
+- [x] Implement password hashing and salting
 - [ ] Add encryption for user data
 - [x] Integrate JWT for authentication
 
@@ -40,6 +40,7 @@ A todo list application built to experiment with Node.js, Express.js, routing, a
 - Gained confidence reading and using documentation
 - Improved structuring of Node.js/Express projects
 - Using GitHub to backup, track and organize the project.
+- Commit often, to make it easier to merge or revert changes later.
 
 ## License
 

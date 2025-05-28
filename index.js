@@ -5,7 +5,6 @@ const initMongoose = require('./src/database/mongoose.database')
 require('dotenv').config({ path: './src/.env' });
 
 const app = express();
-const port = 3000;
 
 const appRouter = require('./router');
 app.use(express.static(path.join(__dirname, './public')), cookieParser());
@@ -15,7 +14,7 @@ initMongoose();
 
 app.use('/', express.json(), appRouter);
 
-app.listen(port, () => {
-    console.log(`Example router listening on port ${port}`)
+app.listen(process.env.SERVER_PORT, () => {
+    console.log(`Example router listening on port ${process.env.SERVER_PORT}`)
 })
 

@@ -5,7 +5,7 @@ const userAuthRoute = require('./src/routes/userAuth.routes');
 const usersRoute = require('./src/routes/user.routes');
 const todosRoute = require('./src/routes/todo.routes');
 
-const { verifyToken, isAdmin } = require('./src/middlewares/authToken.middleware');
+const { verifyToken, checkRole } = require('./src/middlewares/authToken.middleware');
 
 router.use('/auth', userAuthRoute)
 
@@ -15,7 +15,7 @@ router.use('/todos', verifyToken, todosRoute, (req, res) => {
 }
 );
 
-router.use('/users', verifyToken, isAdmin, usersRoute, (req, res) => {
+router.use('/users', verifyToken, checkRole(['admin']), usersRoute, (req, res) => {
     res.json({ message: 'Admin access granted' });
 });
 

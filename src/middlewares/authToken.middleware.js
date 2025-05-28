@@ -23,14 +23,20 @@ const authToken = async (req, res, next) => {
 };
 
 
-const isAdmin = async (req, res, next) => {
-    console.log("isAdmin check");
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Admin access required' });
+function checkRole(rolesArray) {
+    if (!(Array.isArray(rolesArray) && rolesArray.length > 0)) {
+        throw new Error('Invalid roles array!');
     }
-    next();
-};
+    return async function _checkRole(req, res, next) {
+        if (!rolesArray.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Forbidden: Not Authorized!' });
+        }
+        next();
+    };
+}
 
 
 
-module.exports = { verifyToken: authToken, isAdmin };
+
+
+module.exports = { verifyToken: authToken, checkRole };
